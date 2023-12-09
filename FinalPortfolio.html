@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v6.min.js" defer></script>
+    <title>Americans' News Consumption</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        header {
+            background-color: #007BFF;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        article {
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-gap: 20px;
+        }
+
+        .chart {
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        footer {
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Data Visualization Portfolio</h1>
+        <p>By Vidyuth Jagadeesa, Nehemiah Miggiani, Nate Kelkay, Samuel Osei</p>
+    </header>
+    <main>
+        <article>
+            <h2>Analyzing Petroluem and Solar Consumption Both Industrially and Commercially For Each State</h2>
+        </article>
+        <div class="chart-container">
+            <section id="chart1" class="chart">
+                <!-- D3.js code for chart 1 goes here -->
+                <div>
+                    <label for="stateFilter">Select State:</label>
+                    <select id="stateFilter">
+                        <option value="All">All</option>
+                    </select>
+                </div>
+                <script src="https://d3js.org/d3.v6.min.js"></script>
+                <script>
+                    // Load the CSV file
+                    d3.csv("energy.csv").then(function(data) {
+                        // Extract unique states
+                        var states = [...new Set(data.map(d => d.State))];
+                    
+                        // Set up the filter dropdown
+                        var stateFilter = d3.select("#stateFilter");
+                        stateFilter.selectAll("option")
+                            .data(['All', ...states])
+                            .enter()
+                            .append("option")
+                            .text(d => d)
+                            .attr("value", d => d);
+                    
+                        // Set up the SVG dimensions and margins
+                        var margin = { top: 30, right: 20, bottom: 50, left: 80 },
+                            width = 1000 - margin.left - margin.right,
+                            height = 700 - margin.top - margin.bottom;
+                    
+                        // Create the SVG container
+                        var svg = d3.select("#chart1")
+                            .append("svg")
+                            .attr("width", width + margin.left + margin.right)
+                            .attr("height", height + margin.top + margin.bottom)
+                            .append("g")
+                            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                    
+                        // Set up a color scale for distinct colors
+                        var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+                    
+                        // Set the x and y scales
+                        var xScale = d3.scaleLinear()
+                            .domain([d3.min(data, d => +d.Year), d3.max(data, d => +d.Year)])
+                            .range([0, width]);
+                    
+                        var yScale = d3.scaleLinear()
+                            .domain([0, 4000000])
+                            .range([height, 0]);
+                    
+                        // Set up the line generator
+                        var line = d3.line()
+                            .x(d => xScale(+d.Year))
+                            .y(d => yScale(+d['Consumption.Industrial.Petroleum']));
+                    
+                        // Add initial lines and circles for each state
+                        drawLines(data, colorScale);
+                    
+                        // Handle changes in the state filter
+                        stateFilter.on("change", function() {
+                            var selectedState = this.value;
+                            var filteredData = (selectedState === "All") ? data : data.filter(d => d.State === selectedState);
+                            updateLines(filteredData, colorScale);
+                        });
+                    
+                        // Add tooltip div
+                        var tooltip = d3.select("body").append("div")
+                            .attr("class", "tooltip")
+                            .style("opacity", 0);
+                    
+                        // Add x-axis label
+                        svg.append("text")
+                            .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top + 20) + ")")
+                            .style("text-anchor", "middle")
+                            .text("Years");
+                    
+                        // Add y-axis label
+                        svg.append("text")
+                            .attr("transform", "rotate(-90)")
+                            .attr("y", 0 - margin.left)
+                            .attr("x", 0 - (height / 2))
+                            .attr("dy", "1em")
+                            .style("text-anchor", "middle")
+                            .text("Industrial Petroleum Consumption in Billion BTU");
+                    
+                        // Add graph title
+                        svg.append("text")
+                            .attr("x", width / 2)
+                            .attr("y", 0 - (margin.top / 2))
+                            .attr("text-anchor", "middle")
+                            .style("font-size", "16px")
+                            .style("text-decoration", "underline")
+                            .text("Industrial Petroleum Consumption in Billion BTU in Each State From 1960-2019 (Figure A)");
+                    
+                        function drawLines(data, colorScale) {
+                            states.forEach(function(state, index) {
+                                var stateData = data.filter(d => d.State === state);
+                    
+                                // Draw the line
+                                svg.append("path")
+                                    .data([stateData]) // Wrap the stateData in an array
+                                    .attr("fill", "none")
+                                    .attr("stroke", colorScale(index))
+                                    .attr("stroke-width", 2)
+                                    .attr("d", line);
+                    
+                                // Draw circles at data points
+                                svg.selectAll(".circle" + index)
+                                    .data(stateData)
+                                    .enter().append("circle")
+                                    .attr("class", "circle" + index)
+                                    .attr("cx", d => xScale(+d.Year))
+                                    .attr("cy", d => yScale(+d['Consumption.Industrial.Petroleum']))
+                                    .attr("r", 4)
+                                    .attr("fill", colorScale(index))
+                                    .on("mouseover", function(event, d) {
+                                        // Show tooltip
+                                        tooltip.transition()
+                                            .duration(200)
+                                            .style("opacity", .9);
+                    
+                                        // Access the data point from the circle element
+                                        var dataPoint = d3.select(this).datum();
+                    
+                                        tooltip.html(state + "<br/>Year: " + dataPoint.Year + "<br/>Value: " + dataPoint['Consumption.Industrial.Petroleum'])
+                                            .style("left", (event.pageX - tooltip.node().offsetWidth / 2) + "px")
+                                            .style("top", (event.pageY - tooltip.node().offsetHeight - 10) + "px");
+                                    })
+                    
+                                    .on("mouseout", function() {
+                                        // Hide tooltip on mouseout
+                                        tooltip.transition()
+                                            .duration(500)
+                                            .style("opacity", 0);
+                                    });
+                            });
+                    
+                            // Add axes with tick configurations
+                            svg.append("g")
+                                .attr("transform", "translate(0," + height + ")")
+                                .call(d3.axisBottom(xScale).ticks(states.length).tickFormat(d3.format("d")))
+                                .selectAll("text")
+                                .style("text-anchor", "end")
+                                .attr("transform", "rotate(-45)");
+                    
+                            svg.append("g")
+                                .call(d3.axisLeft(yScale).ticks(10)); // Adjust the number of ticks as needed
+                        }
+                    
+                        function updateLines(data, colorScale) {
+                            // Select and remove only the paths and circles created by the lines
+                            svg.selectAll("path, circle").remove();
+                    
+                            drawLines(data, colorScale);
+                        }
+                    
+                    });
+                    </script>
+                    
+                    <style>
+                        /* Add some styling for the tooltip */
+                        .tooltip {
+                            position: absolute;
+                            text-align: center;
+                            padding: 5px;
+                            font: 12px sans-serif;
+                            background: #ffffff;
+                            border: 1px solid #d4d4d4;
+                            border-radius: 3px;
+                            pointer-events: none;
+                        }
+                    </style>
+            </section>
+
+            <section id="chart2" class="chart">
+                <!-- D3.js code for chart 2 goes here -->
+                <div>
+                    <label for="stateFilter1">Select State:</label>
+                    <select id="stateFilter1">
+                        <option value="All">All</option>
+                    </select>
+                </div>
+                
+                <script>
+                // Load the CSV file
+                d3.csv("energy.csv").then(function(data) {
+                    // Extract unique states
+                    var states = [...new Set(data.map(d => d.State))];
+                
+                    // Set up the filter dropdown
+                    var stateFilter = d3.select("#stateFilter1");
+                    stateFilter.selectAll("option")
+                        .data(['All', ...states])
+                        .enter()
+                        .append("option")
+                        .text(d => d)
+                        .attr("value", d => d);
+                
+                    // Set up the SVG dimensions and margins
+                    var margin = { top: 30, right: 20, bottom: 50, left: 80 },
+                        width = 1000 - margin.left - margin.right,
+                        height = 700 - margin.top - margin.bottom;
+                
+                    // Create the SVG container
+                    var svg = d3.select("#chart2")
+                        .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+                    // Set up a color scale for distinct colors
+                    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+                
+                    // Set the x and y scales
+                    var xScale = d3.scaleLinear()
+                        .domain([d3.min(data, d => +d.Year), d3.max(data, d => +d.Year)])
+                        .range([0, width]);
+                
+                    var yScale = d3.scaleLinear()
+                        .domain([0, 4000000])
+                        .range([height, 0]);
+                
+                    // Set up the line generator
+                    var line = d3.line()
+                        .x(d => xScale(+d.Year))
+                        .y(d => yScale(+d['Consumption.Commercial.Petroleum']));
+                
+                    // Add initial lines and circles for each state
+                    drawLines(data, colorScale);
+                
+                    // Handle changes in the state filter
+                    stateFilter.on("change", function() {
+                        var selectedState = this.value;
+                        var filteredData = (selectedState === "All") ? data : data.filter(d => d.State === selectedState);
+                        updateLines(filteredData, colorScale);
+                    });
+                
+                    // Add tooltip div
+                    var tooltip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+                
+                    // Add x-axis label
+                    svg.append("text")
+                        .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top + 20) + ")")
+                        .style("text-anchor", "middle")
+                        .text("Years");
+                
+                    // Add y-axis label
+                    svg.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 0 - margin.left)
+                        .attr("x", 0 - (height / 2))
+                        .attr("dy", "1em")
+                        .style("text-anchor", "middle")
+                        .text("Commercial Petroleum Consumption in Billion BTU");
+                
+                    // Add graph title
+                    svg.append("text")
+                        .attr("x", width / 2)
+                        .attr("y", 0 - (margin.top / 2))
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "16px")
+                        .style("text-decoration", "underline")
+                        .text("Commercial Petroleum Consumption in Billion BTU in Each State From 1960-2019 (Figure B)");
+                
+                    function drawLines(data, colorScale) {
+                        states.forEach(function(state, index) {
+                            var stateData = data.filter(d => d.State === state);
+                
+                            // Draw the line
+                            svg.append("path")
+                                .data([stateData]) // Wrap the stateData in an array
+                                .attr("fill", "none")
+                                .attr("stroke", colorScale(index))
+                                .attr("stroke-width", 2)
+                                .attr("d", line);
+                
+                            // Draw circles at data points
+                            svg.selectAll(".circle" + index)
+                                .data(stateData)
+                                .enter().append("circle")
+                                .attr("class", "circle" + index)
+                                .attr("cx", d => xScale(+d.Year))
+                                .attr("cy", d => yScale(+d['Consumption.Commercial.Petroleum']))
+                                .attr("r", 4)
+                                .attr("fill", colorScale(index))
+                                .on("mouseover", function(event, d) {
+                    // Show tooltip
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                
+                    // Access the data point from the circle element
+                    var dataPoint = d3.select(this).datum();
+                
+                    tooltip.html(state + "<br/>Year: " + dataPoint.Year + "<br/>Value: " + dataPoint['Consumption.Commercial.Petroleum'])
+                        .style("left", (event.pageX - tooltip.node().offsetWidth / 2) + "px")
+                        .style("top", (event.pageY - tooltip.node().offsetHeight - 10) + "px");
+                })
+                
+                                .on("mouseout", function() {
+                                    // Hide tooltip on mouseout
+                                    tooltip.transition()
+                                        .duration(500)
+                                        .style("opacity", 0);
+                                });
+                        });
+                
+                        // Add axes with tick configurations
+                        svg.append("g")
+                            .attr("transform", "translate(0," + height + ")")
+                            .call(d3.axisBottom(xScale).ticks(states.length).tickFormat(d3.format("d")))
+                            .selectAll("text")
+                            .style("text-anchor", "end")
+                            .attr("transform", "rotate(-45)");
+                    
+                
+                        svg.append("g")
+                            .call(d3.axisLeft(yScale).ticks(10)); // Adjust the number of ticks as needed
+                    }
+                
+                    function updateLines(data, colorScale) {
+                        // Select and remove only the paths and circles created by the lines
+                        svg.selectAll("path, circle").remove();
+                
+                        drawLines(data, colorScale);
+                    }
+                
+                });
+                </script>
+                
+                <style>
+                    /* Add some styling for the tooltip */
+                    .tooltip {
+                        position: absolute;
+                        text-align: center;
+                        padding: 5px;
+                        font: 12px sans-serif;
+                        background: #ffffff;
+                        border: 1px solid #d4d4d4;
+                        border-radius: 3px;
+                        pointer-events: none;
+                    }
+                </style>
+            </section>
+            <section id="chart3" class="chart">
+                <!-- D3.js code for chart 3 goes here -->
+                <div>
+                    <label for="stateFilter3">Select State:</label>
+                    <select id="stateFilter3">
+                        <option value="All">All</option>
+                    </select>
+                </div>
+                
+                <script>
+                // Load the CSV file
+                d3.csv("energy.csv").then(function(data) {
+                    // Extract unique states
+                    var states = [...new Set(data.map(d => d.State))];
+                
+                    // Set up the filter dropdown
+                    var stateFilter = d3.select("#stateFilter3");
+                    stateFilter.selectAll("option")
+                        .data(['All', ...states])
+                        .enter()
+                        .append("option")
+                        .text(d => d)
+                        .attr("value", d => d);
+                
+                    // Set up the SVG dimensions and margins
+                    var margin = { top: 30, right: 20, bottom: 50, left: 60 },
+                        width = 1000 - margin.left - margin.right,
+                        height = 700 - margin.top - margin.bottom;
+                
+                    // Create the SVG container
+                    var svg = d3.select("#chart3")
+                        .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+                    // Set up a color scale for distinct colors
+                    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+                
+                    // Set the x and y scales
+                    var xScale = d3.scaleLinear()
+                        .domain([d3.min(data, d => +d.Year), d3.max(data, d => +d.Year)])
+                        .range([0, width]);
+                
+                    var yScale = d3.scaleLinear()
+                        .domain([0, 50000])
+                        .range([height, 0]);
+                
+                    // Set up the line generator
+                    var line = d3.line()
+                        .x(d => xScale(+d.Year))
+                        .y(d => yScale(+d['Consumption.Commercial.Solar']));
+                    
+                
+                    // Add initial lines and circles for each state
+                    drawLines(data, colorScale);
+                
+                    // Handle changes in the state filter
+                    stateFilter.on("change", function() {
+                        var selectedState = this.value;
+                        var filteredData = (selectedState === "All") ? data : data.filter(d => d.State === selectedState);
+                        updateLines(filteredData, colorScale);
+                    });
+                
+                    // Add tooltip div
+                    var tooltip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+                    
+                    // Add x-axis label
+                    svg.append("text")
+                        .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top + 20) + ")")
+                        .style("text-anchor", "middle")
+                        .text("Years");
+                
+                    // Add y-axis label
+                    svg.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 0 - margin.left)
+                        .attr("x", 0 - (height / 2))
+                        .attr("dy", "1em")
+                        .style("text-anchor", "middle")
+                        .text("Commercial Solar Consumption in Billion BTU");
+                
+                    // Add graph title
+                    svg.append("text")
+                        .attr("x", width / 2)
+                        .attr("y", 0 - (margin.top / 2))
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "16px")
+                        .style("text-decoration", "underline")
+                        .text("Commercial Solar Consumption in Billion BTU in Each State From 1960-2019 (Figure C)");
+                
+                    function drawLines(data, colorScale) {
+                        states.forEach(function(state, index) {
+                            var stateData = data.filter(d => d.State === state);
+                
+                            // Draw the line
+                            svg.append("path")
+                                .data([stateData]) // Wrap the stateData in an array
+                                .attr("fill", "none")
+                                .attr("stroke", colorScale(index))
+                                .attr("stroke-width", 2)
+                                .attr("d", line);
+                
+                            // Draw circles at data points
+                            svg.selectAll(".circle" + index)
+                                .data(stateData)
+                                .enter().append("circle")
+                                .attr("class", "circle" + index)
+                                .attr("cx", d => xScale(+d.Year))
+                                .attr("cy", d => yScale(+d['Consumption.Commercial.Solar']))
+                                .attr("r", 4)
+                                .attr("fill", colorScale(index))
+                                .on("mouseover", function(event, d) {
+                    // Show tooltip
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                
+                    // Access the data point from the circle element
+                    var dataPoint = d3.select(this).datum();
+                
+                    tooltip.html(state + "<br/>Year: " + dataPoint.Year + "<br/>Value: " + dataPoint['Consumption.Commercial.Solar'])
+                        .style("left", (event.pageX - tooltip.node().offsetWidth / 2) + "px")
+                        .style("top", (event.pageY - tooltip.node().offsetHeight - 10) + "px");
+                })
+                
+                                .on("mouseout", function() {
+                                    // Hide tooltip on mouseout
+                                    tooltip.transition()
+                                        .duration(500)
+                                        .style("opacity", 0);
+                                });
+                        });
+                
+                        // Add axes with tick configurations
+                        svg.append("g")
+                            .attr("transform", "translate(0," + height + ")")
+                            .call(d3.axisBottom(xScale).ticks(states.length).tickFormat(d3.format("d")))
+                            .selectAll("text")
+                            .style("text-anchor", "end")
+                            .attr("transform", "rotate(-45)");
+                
+                        svg.append("g")
+                            .call(d3.axisLeft(yScale).ticks(10)); // Adjust the number of ticks as needed
+                    }
+                
+                    function updateLines(data, colorScale) {
+                        // Select and remove only the paths and circles created by the lines
+                        svg.selectAll("path, circle").remove();
+                
+                        drawLines(data, colorScale);
+                    }
+                
+                });
+                </script>
+                
+                <style>
+                    /* Add some styling for the tooltip */
+                    .tooltip {
+                        position: absolute;
+                        text-align: center;
+                        padding: 5px;
+                        font: 12px sans-serif;
+                        background: #ffffff;
+                        border: 1px solid #d4d4d4;
+                        border-radius: 3px;
+                        pointer-events: none;
+                    }
+                </style>
+            </section>
+            <section id="chart4" class="chart">
+                <!-- D3.js code for chart 4 goes here -->
+                <div>
+                    <label for="stateFilter4">Select State:</label>
+                    <select id="stateFilter4">
+                        <option value="All">All</option>
+                    </select>
+                </div>
+                <script src="https://d3js.org/d3.v6.min.js"></script>
+                <script>
+                // Load the CSV file
+                d3.csv("energy.csv").then(function(data) {
+                    // Extract unique states
+                    var states = [...new Set(data.map(d => d.State))];
+                
+                    // Set up the filter dropdown
+                    var stateFilter = d3.select("#stateFilter4");
+                    stateFilter.selectAll("option")
+                        .data(['All', ...states])
+                        .enter()
+                        .append("option")
+                        .text(d => d)
+                        .attr("value", d => d);
+                
+                    // Set up the SVG dimensions and margins
+                    var margin = { top: 30, right: 20, bottom: 50, left: 60 },
+                        width = 1000 - margin.left - margin.right,
+                        height = 700 - margin.top - margin.bottom;
+                
+                    // Create the SVG container
+                    var svg = d3.select("#chart4")
+                        .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+                    // Set up a color scale for distinct colors
+                    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+                
+                    // Set the x and y scales
+                    var xScale = d3.scaleLinear()
+                        .domain([d3.min(data, d => +d.Year), d3.max(data, d => +d.Year)])
+                        .range([0, width]);
+                
+                    var yScale = d3.scaleLinear()
+                        .domain([0, 50000])
+                        .range([height, 0]);
+                
+                    // Set up the line generator
+                    var line = d3.line()
+                        .x(d => xScale(+d.Year))
+                        .y(d => yScale(+d['Consumption.Industrial.Solar']));
+                
+                    // Add initial lines and circles for each state
+                    drawLines(data, colorScale);
+                
+                    // Handle changes in the state filter
+                    stateFilter.on("change", function() {
+                        var selectedState = this.value;
+                        var filteredData = (selectedState === "All") ? data : data.filter(d => d.State === selectedState);
+                        updateLines(filteredData, colorScale);
+                    });
+                
+                    // Add tooltip div
+                    var tooltip = d3.select("body").append("div")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+                    
+                    // Add x-axis label
+                    svg.append("text")
+                        .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top + 20) + ")")
+                        .style("text-anchor", "middle")
+                        .text("Years");
+                
+                    // Add y-axis label
+                    svg.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 0 - margin.left)
+                        .attr("x", 0 - (height / 2))
+                        .attr("dy", "1em")
+                        .style("text-anchor", "middle")
+                        .text("Industrial Solar Consumption in Billion BTU");
+                
+                    // Add graph title
+                    svg.append("text")
+                        .attr("x", width / 2)
+                        .attr("y", 0 - (margin.top / 2))
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "16px")
+                        .style("text-decoration", "underline")
+                        .text("Industrial Solar Consumption in Billion BTU in Each State From 1960-2019 (Figure D)");
+                
+                    function drawLines(data, colorScale) {
+                        states.forEach(function(state, index) {
+                            var stateData = data.filter(d => d.State === state);
+                
+                            // Draw the line
+                            svg.append("path")
+                                .data([stateData]) // Wrap the stateData in an array
+                                .attr("fill", "none")
+                                .attr("stroke", colorScale(index))
+                                .attr("stroke-width", 2)
+                                .attr("d", line);
+                
+                            // Draw circles at data points
+                            svg.selectAll(".circle" + index)
+                                .data(stateData)
+                                .enter().append("circle")
+                                .attr("class", "circle" + index)
+                                .attr("cx", d => xScale(+d.Year))
+                                .attr("cy", d => yScale(+d['Consumption.Industrial.Solar']))
+                                .attr("r", 4)
+                                .attr("fill", colorScale(index))
+                                .on("mouseover", function(event, d) {
+                    // Show tooltip
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                
+                    // Access the data point from the circle element
+                    var dataPoint = d3.select(this).datum();
+                
+                    tooltip.html(state + "<br/>Year: " + dataPoint.Year + "<br/>Value: " + dataPoint['Consumption.Industrial.Solar'])
+                        .style("left", (event.pageX - tooltip.node().offsetWidth / 2) + "px")
+                        .style("top", (event.pageY - tooltip.node().offsetHeight - 10) + "px");
+                })
+                
+                                .on("mouseout", function() {
+                                    // Hide tooltip on mouseout
+                                    tooltip.transition()
+                                        .duration(500)
+                                        .style("opacity", 0);
+                                });
+                        });
+                
+                        // Add axes with tick configurations
+                        svg.append("g")
+                            .attr("transform", "translate(0," + height + ")")
+                            .call(d3.axisBottom(xScale).ticks(states.length).tickFormat(d3.format("d")))
+                            .selectAll("text")
+                            .style("text-anchor", "end")
+                            .attr("transform", "rotate(-45)");
+                
+                        svg.append("g")
+                            .call(d3.axisLeft(yScale).ticks(10)); // Adjust the number of ticks as needed
+                    }
+                
+                    function updateLines(data, colorScale) {
+                        // Select and remove only the paths and circles created by the lines
+                        svg.selectAll("path, circle").remove();
+                
+                        drawLines(data, colorScale);
+                    }
+                
+                });
+                </script>
+                
+                <style>
+                    /* Add some styling for the tooltip */
+                    .tooltip {
+                        position: absolute;
+                        text-align: center;
+                        padding: 5px;
+                        font: 12px sans-serif;
+                        background: #ffffff;
+                        border: 1px solid #d4d4d4;
+                        border-radius: 3px;
+                        pointer-events: none;
+                    }
+                </style>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
